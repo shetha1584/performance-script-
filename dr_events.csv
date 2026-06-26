@@ -1,0 +1,12 @@
+date,day,time,target,actual_pct,kwh_shifted,savings,result
+2025-01-05,Sunday,6–9 PM,20,6,12,660,Missed
+2025-01-09,Thursday,6–9 PM,15,17,34,1870,Achieved
+2025-01-12,Sunday,6–9 AM,15,18,28,1540,Achieved
+2025-01-14,Tuesday,6–9 PM,20,9,18,990,Missed
+2025-01-16,Thursday,6–9 PM,15,16,32,1760,Achieved
+2025-01-19,Sunday,6–9 AM,15,19,38,2090,Achieved
+2025-01-21,Tuesday,6–9 PM,15,14,28,1540,Missed
+2025-01-23,Thursday,6–9 PM,15,18,36,1980,Achieved
+2025-01-26,Sunday,6–9 AM,15,21,42,2310,Achieved
+2025-01-28,Tuesday,6–9 PM,15,16,32,1760,Achieved
+2025-01-30,Thursday,6–9 PM,20,22,44,2420,Achieved

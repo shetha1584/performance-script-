@@ -1,0 +1,607 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+
+<title>Demand Response Report</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+}
+
+body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    background:#f5f7f6;
+    color:#111810;
+    padding:32px;
+}
+
+/* ============================================================
+HEADER
+============================================================ */
+
+.header{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    margin-bottom:28px;
+    padding-bottom:18px;
+    border-bottom:2px solid #111810;
+}
+
+.brand{
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+}
+
+.brand-title{
+    font-size:28px;
+    font-weight:800;
+}
+
+.brand-title span{
+    color:#2A5C3F;
+}
+
+.brand-sub{
+    color:#6d7a70;
+    font-size:13px;
+}
+
+.header-right{
+    text-align:right;
+}
+
+.report-title{
+    font-size:34px;
+    font-weight:800;
+}
+
+.report-meta{
+    color:#6d7a70;
+    margin-top:6px;
+    font-size:14px;
+}
+
+/* ============================================================
+KPI STRIP
+============================================================ */
+
+.kpi-grid{
+    display:grid;
+    grid-template-columns:2fr 1fr 1fr 1fr;
+    gap:18px;
+    margin-bottom:28px;
+}
+
+.card{
+    background:white;
+    border-radius:22px;
+    padding:24px;
+    box-shadow:
+        0 4px 10px rgba(0,0,0,0.04),
+        0 12px 32px rgba(0,0,0,0.05);
+}
+
+.hero{
+    background:linear-gradient(
+        135deg,
+        #111810 0%,
+        #203127 100%
+    );
+    color:white;
+}
+
+.kpi-label{
+    font-size:11px;
+    letter-spacing:1px;
+    text-transform:uppercase;
+    color:#8ea095;
+    margin-bottom:10px;
+    font-weight:700;
+}
+
+.hero .kpi-label{
+    color:#c9d8cf;
+}
+
+.kpi-value{
+    font-size:38px;
+    font-weight:800;
+    line-height:1.1;
+}
+
+.green{
+    color:#6EAB85;
+}
+
+.orange{
+    color:#ff9c7a;
+}
+
+.blue{
+    color:#1E3F5A;
+}
+
+.yellow{
+    color:#A87800;
+}
+
+.kpi-sub{
+    margin-top:10px;
+    color:#7a8c7e;
+    font-size:13px;
+}
+
+.hero .kpi-sub{
+    color:#dce6df;
+}
+
+.divider{
+    height:1px;
+    background:rgba(255,255,255,0.12);
+    margin:20px 0;
+}
+
+/* ============================================================
+SECTIONS
+============================================================ */
+
+.section{
+    margin-bottom:30px;
+}
+
+.section-header{
+    display:flex;
+    align-items:center;
+    gap:14px;
+    margin-bottom:18px;
+}
+
+.section-circle{
+    width:32px;
+    height:32px;
+    border-radius:50%;
+    background:#111810;
+    color:white;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-weight:700;
+}
+
+.section-title{
+    font-size:14px;
+    font-weight:800;
+    letter-spacing:1px;
+    text-transform:uppercase;
+    color:#3A4A3D;
+}
+
+/* ============================================================
+CHART CARD
+============================================================ */
+
+.chart-card{
+    background:white;
+    border-radius:22px;
+    padding:24px;
+    box-shadow:
+        0 4px 10px rgba(0,0,0,0.04),
+        0 12px 32px rgba(0,0,0,0.05);
+}
+
+.chart-title{
+    font-size:13px;
+    text-transform:uppercase;
+    letter-spacing:1px;
+    color:#7a8c7e;
+    margin-bottom:18px;
+    font-weight:700;
+}
+
+canvas{
+    width:100% !important;
+    height:320px !important;
+}
+
+/* ============================================================
+ACTION PANEL
+============================================================ */
+
+.action-panel{
+    background:linear-gradient(
+        135deg,
+        #2A5C3F 0%,
+        #163423 100%
+    );
+
+    border-radius:24px;
+    padding:32px;
+    color:white;
+}
+
+.action-eyebrow{
+    font-size:11px;
+    letter-spacing:1px;
+    text-transform:uppercase;
+    color:#cfe6d7;
+    margin-bottom:8px;
+    font-weight:700;
+}
+
+.action-title{
+    font-size:28px;
+    font-weight:800;
+    margin-bottom:28px;
+}
+
+.action-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr 1fr;
+    gap:24px;
+}
+
+.action-item{
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+}
+
+.action-number{
+    width:36px;
+    height:36px;
+    border-radius:50%;
+    background:#F9C840;
+    color:#111810;
+    font-weight:800;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+}
+
+.action-text{
+    line-height:1.7;
+    color:#d8e8dd;
+    font-size:15px;
+}
+
+/* ============================================================
+FOOTER
+============================================================ */
+
+.footer{
+    margin-top:32px;
+    padding-top:18px;
+    border-top:1px solid #d7dbd7;
+    display:flex;
+    justify-content:space-between;
+    color:#7a8c7e;
+    font-size:13px;
+}
+
+</style>
+</head>
+
+<body>
+
+<!-- ============================================================
+HEADER
+============================================================ -->
+
+<div class="header">
+
+    <div class="brand">
+        <div class="brand-title">
+            elements <span>energy</span>
+        </div>
+
+        <div class="brand-sub">
+            Demand Response Platform
+        </div>
+    </div>
+
+    <div class="header-right">
+        <div class="report-title">
+            Performance Report
+        </div>
+
+        <div class="report-meta">
+            Main Office Tower · January 2025
+        </div>
+    </div>
+
+</div>
+
+<!-- ============================================================
+KPI GRID
+============================================================ -->
+
+<div class="kpi-grid">
+
+    <div class="card hero">
+
+        <div class="kpi-label">
+            Total DR Savings
+        </div>
+
+        <div class="kpi-value green">
+            ₹1.8 lakh
+        </div>
+
+        <div class="kpi-sub">
+            ↑ +12% vs last month
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="kpi-label">
+            Missed Savings
+        </div>
+
+        <div class="kpi-value orange">
+            ₹42,000
+        </div>
+
+        <div class="kpi-sub">
+            Evening peak gaps
+        </div>
+
+    </div>
+
+    <div class="card">
+
+        <div class="kpi-label">
+            Total Energy
+        </div>
+
+        <div class="kpi-value">
+            132,480 kWh
+        </div>
+
+        <div class="kpi-sub">
+            This month
+        </div>
+
+    </div>
+
+    <div class="card">
+
+        <div class="kpi-label">
+            Monthly Bill
+        </div>
+
+        <div class="kpi-value blue">
+            ₹8.4 lakh
+        </div>
+
+        <div class="kpi-sub">
+            After DR savings
+        </div>
+
+    </div>
+
+    <div class="card">
+
+        <div class="kpi-label">
+            Participation
+        </div>
+
+        <div class="kpi-value yellow">
+            48%
+        </div>
+
+        <div class="kpi-sub">
+            Target: 60%
+        </div>
+
+    </div>
+
+</div>
+
+<!-- ============================================================
+CHART SECTION
+============================================================ -->
+
+<div class="section">
+
+    <div class="section-header">
+        <div class="section-circle">1</div>
+
+        <div class="section-title">
+            Daily Energy
+        </div>
+    </div>
+
+    <div class="chart-card">
+
+        <div class="chart-title">
+            Daily Performance — January 2025
+        </div>
+
+        <canvas id="dailyChart"></canvas>
+
+    </div>
+
+</div>
+
+<!-- ============================================================
+ACTION PLAN
+============================================================ -->
+
+<div class="section">
+
+    <div class="section-header">
+        <div class="section-circle">2</div>
+
+        <div class="section-title">
+            Action Plan
+        </div>
+    </div>
+
+    <div class="action-panel">
+
+        <div class="action-eyebrow">
+            Recommendations
+        </div>
+
+        <div class="action-title">
+            3 things to act on this month
+        </div>
+
+        <div class="action-grid">
+
+            
+
+            <div class="action-item">
+
+                <div class="action-number">
+                    1
+                </div>
+
+                <div class="action-text">
+                    Shift HVAC pre-cooling to 5–6 PM
+                </div>
+
+            </div>
+
+            
+
+            <div class="action-item">
+
+                <div class="action-number">
+                    2
+                </div>
+
+                <div class="action-text">
+                    Reduce evening cafeteria load during DR windows
+                </div>
+
+            </div>
+
+            
+
+            <div class="action-item">
+
+                <div class="action-number">
+                    3
+                </div>
+
+                <div class="action-text">
+                    Enable auto-response strategy for lighting loads
+                </div>
+
+            </div>
+
+            
+
+        </div>
+
+    </div>
+
+</div>
+
+<!-- ============================================================
+FOOTER
+============================================================ -->
+
+<div class="footer">
+
+    <div>
+        This report covers DR performance for
+        Main Office Tower
+    </div>
+
+    <div>
+        elements energy · January 2025
+    </div>
+
+</div>
+
+<!-- ============================================================
+CHARTS
+============================================================ -->
+
+<script>
+
+const ctx = document.getElementById('dailyChart');
+
+new Chart(ctx, {
+
+    type: 'bar',
+
+    data: {
+
+        labels: [
+            '1','2','3','4','5','6','7','8'
+        ],
+
+        datasets: [
+
+            {
+                label:'Daily Consumption',
+                data:[220,260,240,280,250,290,300,275],
+                backgroundColor:'rgba(110,171,133,0.2)',
+                borderColor:'#6EAB85',
+                borderWidth:2,
+                borderRadius:12
+            },
+
+            {
+                label:'DR Events',
+                data:[40,30,50,35,60,30,45,55],
+                backgroundColor:'#2A5C3F',
+                borderRadius:12
+            }
+        ]
+    },
+
+    options: {
+
+        responsive:true,
+
+        maintainAspectRatio:false,
+
+        plugins:{
+            legend:{
+                labels:{
+                    color:'#6d7a70'
+                }
+            }
+        },
+
+        scales:{
+
+            x:{
+                ticks:{
+                    color:'#6d7a70'
+                },
+                grid:{
+                    display:false
+                }
+            },
+
+            y:{
+                ticks:{
+                    color:'#6d7a70'
+                },
+                grid:{
+                    color:'rgba(0,0,0,0.04)'
+                }
+            }
+        }
+    }
+});
+
+</script>
+
+</body>
+</html>

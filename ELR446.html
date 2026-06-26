@@ -1,0 +1,485 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>elements energy — Performance Report</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&family=Google+Sans+Mono:wght@400;500&display=swap');
+:root {
+  --ink:#111810;--ink-mid:#3A4A3D;--ink-light:#7A8C7E;
+  --lichen:#6EAB85;--lichen-deep:#2A5C3F;--lichen-tint:#EBF6F0;
+  --monsoon:#5B92AD;--monsoon-deep:#1E3F5A;
+  --solar:#F9C840;--solar-dark:#A87800;--solar-pale:#FFFAEA;
+  --alert:#D94F2E;--alert-pale:#FEF0EC;
+  --white:#ffffff;--surface:#F7F8F7;--border:#E8EAE8;--border-mid:#D4D8D4;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Google Sans',sans-serif;background:var(--white);color:var(--ink);font-size:13px;line-height:1.5;}
+.page{width:960px;margin:0 auto;background:var(--white);padding:40px 40px 48px;position:relative;}
+.page-label{position:absolute;top:14px;right:18px;font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--border-mid);}
+.header{display:grid;grid-template-columns:1fr auto;align-items:start;padding-bottom:18px;margin-bottom:26px;border-bottom:2.5px solid var(--ink);}
+.logo-row{display:flex;align-items:center;gap:9px;margin-bottom:3px;}
+.logo-text{font-size:18px;font-weight:700;color:var(--ink);}
+.logo-text span{color:var(--lichen-deep);}
+.logo-sub{font-size:10px;color:var(--ink-light);font-weight:500;letter-spacing:.06em;text-transform:uppercase;margin-left:37px;}
+.header-right{text-align:right;}
+.report-title{font-size:26px;font-weight:700;color:var(--ink);letter-spacing:-.02em;line-height:1.1;}
+.report-meta{font-size:12px;color:var(--ink-light);margin-top:4px;}
+.pills{display:flex;gap:6px;justify-content:flex-end;margin-top:9px;}
+.pill{font-size:10.5px;font-weight:500;padding:3px 11px;border-radius:20px;border:1px solid var(--border-mid);color:var(--ink-mid);}
+.pill.solar{background:var(--solar-pale);border-color:rgba(249,200,64,.45);color:var(--solar-dark);}
+.pill.lichen{background:var(--lichen-tint);border-color:rgba(110,171,133,.4);color:var(--lichen-deep);}
+.chapter{display:flex;align-items:center;gap:10px;margin-bottom:14px;margin-top:28px;}
+.chapter:first-of-type{margin-top:0;}
+.chapter-num{width:22px;height:22px;border-radius:50%;background:var(--ink);color:#fff;font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.chapter-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:var(--ink-mid);}
+.chapter-line{flex:1;height:1px;background:var(--border);}
+.kpi-strip{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:0;border:1px solid var(--border);border-radius:12px;overflow:hidden;margin-bottom:14px;}
+.kpi{padding:18px 20px;border-right:1px solid var(--border);background:var(--white);}
+.kpi:last-child{border-right:none;}
+.kpi-top{display:flex;align-items:center;gap:6px;margin-bottom:6px;}
+.kpi-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0;}
+.kpi-lbl{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-light);}
+.kpi-val{font-size:26px;font-weight:700;line-height:1;letter-spacing:-.02em;margin-bottom:4px;font-family:'Google Sans Mono',monospace;}
+.kpi-sub{font-size:10.5px;color:var(--ink-light);}
+.kpi.hero{background:var(--ink);padding:0;display:flex;flex-direction:column;}
+.kpi-half{padding:16px 20px;flex:1;display:flex;flex-direction:column;justify-content:center;}
+.kpi-half.top{border-bottom:1px solid rgba(255,255,255,.1);}
+.kpi.hero .kpi-lbl{color:rgba(255,255,255,.38);}
+.kpi.hero .kpi-sub{color:rgba(255,255,255,.3);}
+.kpi-half.top .kpi-val{color:var(--lichen);font-size:28px;}
+.kpi-half.bottom .kpi-val{color:#F28B72;font-size:22px;}
+.kpi-half.bottom .kpi-lbl{color:rgba(255,255,255,.3);}
+.kpi-half.bottom .kpi-sub{color:rgba(255,255,255,.25);}
+.kpi.k-neutral .kpi-val{color:var(--ink);font-family:'Google Sans Mono',monospace;}
+.kpi.k-yellow .kpi-val{color:var(--solar-dark);font-family:'Google Sans Mono',monospace;}
+.card{background:var(--white);border:1px solid var(--border);border-radius:10px;padding:16px;}
+.card-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-light);margin-bottom:12px;}
+.chart-card{background:var(--white);border:1px solid var(--border);border-radius:12px;overflow:hidden;}
+.chart-head{padding:13px 17px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.chart-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-light);}
+.legend{display:flex;align-items:center;gap:14px;font-size:11px;color:var(--ink-light);}
+.lswatch{display:inline-block;width:10px;height:10px;border-radius:2px;vertical-align:middle;margin-right:4px;}
+.alert-tag{background:var(--alert-pale);border:1px solid rgba(217,79,46,.25);color:var(--alert);font-size:10.5px;font-weight:600;padding:4px 11px;border-radius:20px;}
+.chart-body{padding:14px 16px 12px 6px;position:relative;}
+.mbar{margin-bottom:12px;}
+.mbar:last-of-type{margin-bottom:0;}
+.mbar-header{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:5px;}
+.mbar-name{font-size:12px;font-weight:500;color:var(--ink-mid);}
+.mbar-time{font-size:10px;color:var(--ink-light);margin-left:4px;}
+.mbar-amt{font-size:13px;font-weight:700;font-family:'Google Sans Mono',monospace;}
+.mbar-track{height:7px;background:var(--surface);border-radius:4px;overflow:hidden;border:1px solid var(--border);}
+.mbar-fill{height:100%;border-radius:4px;}
+.why{margin-top:14px;padding:10px 12px;background:var(--alert-pale);border-radius:7px;border:1px solid rgba(217,79,46,.18);}
+.why-head{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;color:var(--alert);margin-bottom:6px;}
+.why-item{font-size:11px;color:var(--ink-mid);margin-bottom:3px;padding-left:10px;position:relative;}
+.why-item::before{content:'·';position:absolute;left:0;color:var(--alert);font-weight:700;}
+.action-panel{background:var(--lichen-deep);border-radius:12px;padding:22px 24px;}
+.action-panel-head{display:flex;align-items:baseline;gap:10px;margin-bottom:16px;padding-bottom:14px;border-bottom:1px solid rgba(255,255,255,.15);}
+.action-eyebrow{font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:rgba(255,255,255,.45);}
+.action-heading{font-size:15px;font-weight:700;color:#fff;}
+.action-items{display:grid;grid-template-columns:1fr 1fr 1fr;gap:14px;}
+.action-item{display:flex;flex-direction:column;gap:7px;}
+.action-num{width:20px;height:20px;border-radius:50%;background:var(--solar);color:var(--ink);font-size:10px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+.action-text{font-size:12px;color:rgba(255,255,255,.82);line-height:1.55;}
+.action-text strong{color:#fff;}
+.footer{margin-top:32px;padding-top:16px;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.footer-note{font-size:11px;color:var(--ink-light);max-width:500px;line-height:1.6;}
+.footer-brand{font-size:11px;font-weight:700;color:var(--ink-light);}
+.footer-brand span{color:var(--lichen-deep);}
+.p2-header{display:flex;align-items:center;justify-content:space-between;padding-bottom:10px;margin-bottom:14px;border-bottom:1px solid var(--border);}
+.p2-logo{display:flex;align-items:center;gap:8px;}
+.p2-logo-text{font-size:14px;font-weight:700;color:var(--ink);}
+.p2-logo-text span{color:var(--lichen-deep);}
+.p2-title{font-size:13px;font-weight:500;color:var(--ink-light);}
+.evt-tbl{width:100%;border-collapse:collapse;font-size:12.5px;}
+.evt-tbl thead th{font-size:9.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--ink-light);font-weight:700;padding:8px 12px;text-align:left;border-bottom:2px solid var(--ink);background:var(--surface);}
+.evt-tbl tbody td{padding:10px 12px;color:var(--ink);border-bottom:1px solid var(--border);}
+.evt-tbl tbody tr:last-child td{border-bottom:none;}
+.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:10.5px;font-weight:700;}
+.badge-m{background:var(--alert-pale);color:var(--alert);border:1px solid rgba(217,79,46,.2);}
+.badge-a{background:var(--lichen-tint);color:var(--lichen-deep);border:1px solid rgba(110,171,133,.25);}
+.evt-note{padding:12px 16px;background:var(--lichen-tint);border-radius:8px;border:1px solid rgba(110,171,133,.3);font-size:12px;color:var(--ink-mid);line-height:1.6;}
+canvas{display:block;}
+</style>
+</head>
+<body>
+
+<!-- PAGE 1 -->
+<div class="page" id="page1">
+  <span class="page-label">Page 1 of 2</span>
+  <div class="header">
+    <div>
+      <div class="logo-row">
+        <svg width="26" height="26" viewBox="0 0 28 28" fill="none">
+          <circle cx="11" cy="16" r="10" fill="#2A5C3F"/>
+          <circle cx="20" cy="10" r="8" fill="#6EAB85"/>
+          <path d="M17 8L22 8M16 11L23 11M18 14L22 14" stroke="#1A3D2B" stroke-width="1.4" stroke-linecap="round"/>
+        </svg>
+        <span class="logo-text">elements <span>energy</span></span>
+      </div>
+      <div class="logo-sub">Demand Response Platform</div>
+    </div>
+    <div class="header-right">
+      <div class="report-title">Performance Report</div>
+      <div class="report-meta">Main Office Tower &nbsp;·&nbsp; May 2025</div>
+      <div class="pills">
+        <span class="pill solar">★ Streak: 0</span>
+        <span class="pill lichen">Rank #2 · Andhra Pradesh</span>
+        <span class="pill">Off-peak ₹5.55/unit</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="chapter"><div class="chapter-num">1</div><div class="chapter-label">Monthly Summary</div><div class="chapter-line"></div></div>
+
+  <div class="kpi-strip" style="margin-bottom:14px;">
+    <div class="kpi hero">
+      <div class="kpi-half top">
+        <div class="kpi-top"><div class="kpi-dot" style="background:var(--lichen);"></div><div class="kpi-lbl">Total DR Savings</div></div>
+        <div class="kpi-val">₹4,357,800</div>
+        <div class="kpi-sub">↑ +12% vs last month</div>
+      </div>
+      <div class="kpi-half bottom">
+        <div class="kpi-top"><div class="kpi-dot" style="background:#F28B72;"></div><div class="kpi-lbl">Missed Savings</div></div>
+        <div class="kpi-val">₹11,700</div>
+        <div class="kpi-sub">Evening peak gaps</div>
+      </div>
+    </div>
+    <div class="kpi k-neutral" style="display:flex;flex-direction:column;justify-content:center;gap:0;">
+      <div style="padding-bottom:10px;border-bottom:1px solid var(--border);">
+        <div class="kpi-top"><div class="kpi-dot" style="background:var(--ink-light);"></div><div class="kpi-lbl">Total Energy Consumed</div></div>
+        <div class="kpi-val">8,420<span style="font-size:14px;font-weight:500;color:var(--ink-light);font-family:'Google Sans',sans-serif;"> kWh</span></div>
+        <div class="kpi-sub">This month</div>
+      </div>
+      <div style="padding-top:10px;">
+        <div class="kpi-top"><div class="kpi-dot" style="background:var(--monsoon);"></div><div class="kpi-lbl">Peak Demand</div></div>
+        <div style="font-size:20px;font-weight:700;font-family:'Google Sans Mono',monospace;color:var(--monsoon-deep);letter-spacing:-.02em;line-height:1.1;">142<span style="font-size:13px;font-weight:500;color:var(--ink-light);font-family:'Google Sans',sans-serif;"> kVA</span></div>
+        <div class="kpi-sub">Recorded Jan 14, 6:42 PM</div>
+      </div>
+    </div>
+    <div class="kpi" style="padding:14px 16px 12px;">
+      <div class="kpi-top" style="margin-bottom:9px;"><div class="kpi-dot" style="background:var(--monsoon);"></div><div class="kpi-lbl">Tariff Split — kWh</div></div>
+      <div style="display:flex;height:48px;border-radius:5px;overflow:hidden;gap:2px;margin-bottom:9px;">
+        <div style="width:57.2%;background:#6EAB85;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;">
+          <div style="font-size:7.5px;font-weight:700;color:rgba(255,255,255,.85);text-transform:uppercase;letter-spacing:.04em;">Off-Peak</div>
+          <div style="font-size:10px;font-weight:700;color:#fff;font-family:'Google Sans Mono',monospace;line-height:1;">4,820</div>
+          <div style="font-size:7px;color:rgba(255,255,255,.7);">₹18,660</div>
+        </div>
+        <div style="width:26.1%;background:#D94F2E;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;">
+          <div style="font-size:7.5px;font-weight:700;color:rgba(255,255,255,.85);text-transform:uppercase;letter-spacing:.04em;">Peak</div>
+          <div style="font-size:10px;font-weight:700;color:#fff;font-family:'Google Sans Mono',monospace;line-height:1;">2,200</div>
+          <div style="font-size:7px;color:rgba(255,255,255,.7);">₹18,200</div>
+        </div>
+        <div style="width:16.7%;background:#E8A800;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;">
+          <div style="font-size:7px;font-weight:700;color:rgba(255,255,255,.9);text-transform:uppercase;letter-spacing:.03em;">Nrml</div>
+          <div style="font-size:9px;font-weight:700;color:#fff;font-family:'Google Sans Mono',monospace;line-height:1;">1,400</div>
+          <div style="font-size:6.5px;color:rgba(255,255,255,.8);">₹9,450</div>
+        </div>
+      </div>
+      <div style="font-size:10px;color:var(--ink-light);">Total bill: <strong style="color:var(--monsoon-deep);font-family:'Google Sans Mono',monospace;">₹46,310</strong></div>
+    </div>
+    <div class="kpi k-yellow" style="display:flex;flex-direction:column;justify-content:center;">
+      <div class="kpi-top"><div class="kpi-dot" style="background:var(--solar);"></div><div class="kpi-lbl">Participation Days</div></div>
+      <div style="display:flex;align-items:baseline;gap:4px;margin-bottom:3px;">
+        <div class="kpi-val" style="font-size:28px;">0</div>
+        <div style="font-size:13px;font-weight:500;color:var(--ink-light);">/ 31 days</div>
+      </div>
+      <div class="kpi-sub" style="margin-bottom:10px;">↓ Target: 19 days (60%)</div>
+      <div style="height:5px;background:rgba(249,200,64,.2);border-radius:3px;overflow:hidden;">
+        <div style="width:0%;height:100%;background:var(--solar);border-radius:3px;"></div>
+      </div>
+      <div style="display:flex;justify-content:space-between;margin-top:4px;">
+        <div style="font-size:9px;color:var(--solar-dark);font-weight:700;">0% achieved</div>
+        <div style="font-size:9px;color:var(--ink-light);">Target 60%</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="chapter"><div class="chapter-num">2</div><div class="chapter-label">Load Analysis</div><div class="chapter-line"></div></div>
+
+  <div class="chart-card" style="margin-bottom:12px;">
+    <div class="chart-head">
+      <div style="display:flex;align-items:center;gap:16px;">
+        <span class="chart-title">Daily Energy — May 2025</span>
+        <div class="legend">
+          <span><span style="display:inline-block;width:18px;height:2px;background:#2A5C3F;vertical-align:middle;margin-right:4px;"></span>Daily consumption</span>
+          <span><span style="display:inline-block;width:18px;height:0;border-top:2px dashed rgba(42,92,63,0.45);vertical-align:middle;margin-right:4px;"></span>Average (~328 kWh)</span>
+        </div>
+      </div>
+      <div class="alert-tag">₹8,500 potential evening savings</div>
+    </div>
+    <div class="chart-body" style="height:215px;padding-top:8px;"><canvas id="hourlyChart"></canvas></div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 2fr;gap:12px;margin-bottom:12px;">
+    <div class="card">
+      <div class="card-title">Missed savings breakdown</div>
+      <div class="mbar">
+        <div class="mbar-header">
+          <span class="mbar-name">Morning<span class="mbar-time"> 6–9 AM</span></span>
+          <span class="mbar-amt" style="color:var(--ink-mid);">₹3,200</span>
+        </div>
+        <div class="mbar-track"><div class="mbar-fill" style="width:27%;background:var(--lichen);"></div></div>
+      </div>
+      <div class="mbar">
+        <div class="mbar-header">
+          <span class="mbar-name">Evening ⚠<span class="mbar-time"> 6–9 PM</span></span>
+          <span class="mbar-amt" style="color:var(--alert);">₹8,500</span>
+        </div>
+        <div class="mbar-track"><div class="mbar-fill" style="width:100%;background:var(--alert);"></div></div>
+      </div>
+      <div class="why">
+        <div class="why-head">Why evening underperformed</div>
+                <div class="why-item">22% higher evening peak energy use</div>
+        <div class="why-item">Lower response after 6 PM</div>
+      </div>
+    </div>
+    <div class="card" style="display:flex;flex-direction:column;">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+        <div class="card-title" style="margin-bottom:0;">Performance: Actual vs Booked% vs Max Potential</div>
+        <div style="display:flex;gap:12px;">
+          <span style="font-size:10px;color:var(--ink-light);display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:#2A5C3F;display:inline-block;"></span>Actual</span>
+          <span style="font-size:10px;color:var(--ink-light);display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:#6EAB85;display:inline-block;"></span>Booked%</span>
+          <span style="font-size:10px;color:var(--ink-light);display:flex;align-items:center;gap:4px;"><span style="width:10px;height:10px;border-radius:2px;background:#D4D8D4;border:1.5px solid #7A8C7E;display:inline-block;"></span>Max Potential</span>
+        </div>
+      </div>
+      <div style="position:relative;flex:1;min-height:160px;"><canvas id="perfCombinedChart"></canvas></div>
+    </div>
+  </div>
+
+  <div class="chapter" style="margin-top:20px;"><div class="chapter-num" style="background:var(--monsoon-deep);">3</div><div class="chapter-label">Peak Demand Analysis</div><div class="chapter-line"></div></div>
+
+  <div style="display:grid;grid-template-columns:200px 1fr 1.6fr;gap:12px;margin-bottom:12px;">
+    <div class="card" style="display:flex;flex-direction:column;justify-content:center;gap:0;">
+      <div class="card-title">Demand Overview</div>
+      <div style="display:flex;flex-direction:column;gap:0;">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);"><span style="font-size:11px;color:var(--ink-mid);">Contract Demand</span><span style="font-size:12px;font-weight:700;font-family:'Google Sans Mono',monospace;color:var(--ink);">1,000 kVA</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);"><span style="font-size:11px;color:var(--ink-mid);">Maximum Demand</span><span style="font-size:12px;font-weight:700;font-family:'Google Sans Mono',monospace;color:var(--alert);">812 kVA</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);"><span style="font-size:11px;color:var(--ink-mid);">Average Demand</span><span style="font-size:12px;font-weight:700;font-family:'Google Sans Mono',monospace;color:var(--lichen-deep);">642 kVA</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--border);"><span style="font-size:11px;color:var(--ink-mid);">Utilization (Max)</span><span style="font-size:12px;font-weight:700;font-family:'Google Sans Mono',monospace;color:var(--alert);">81%</span></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;"><span style="font-size:11px;color:var(--ink-mid);">Utilization (Avg)</span><span style="font-size:12px;font-weight:700;font-family:'Google Sans Mono',monospace;color:var(--lichen-deep);">64%</span></div>
+      </div>
+    </div>
+    <div class="card" style="display:flex;flex-direction:column;">
+      <div class="card-title">Demand (kVA)</div>
+      <div style="position:relative;flex:1;min-height:160px;"><canvas id="demandChart"></canvas></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Peak occurrence by hour &amp; day</div>
+      <canvas id="heatmapChart" height="160"></canvas>
+      <div style="display:flex;align-items:center;gap:6px;margin-top:8px;">
+        <span style="font-size:9px;color:var(--ink-light);">Low</span>
+        <div style="display:flex;gap:2px;flex:1;">
+          <div style="flex:1;height:6px;border-radius:1px;background:#E8F3F8;"></div>
+          <div style="flex:1;height:6px;border-radius:1px;background:#9DBFCE;"></div>
+          <div style="flex:1;height:6px;border-radius:1px;background:var(--monsoon);"></div>
+          <div style="flex:1;height:6px;border-radius:1px;background:var(--solar);"></div>
+          <div style="flex:1;height:6px;border-radius:1px;background:var(--alert);"></div>
+        </div>
+        <span style="font-size:9px;color:var(--ink-light);">High</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="chapter"><div class="chapter-num">4</div><div class="chapter-label">DR Events</div><div class="chapter-line"></div></div>
+  <div class="chart-card" style="margin-bottom:0;">
+    <div class="chart-head">
+      <div style="display:flex;align-items:center;gap:16px;">
+        <span class="chart-title">DR Shifted — May 2025</span>
+        <div class="legend"><span><span class="lswatch" style="background:rgba(91,146,173,0.55);border:1px solid #5B92AD;"></span>DR shifted (kWh)</span></div>
+      </div>
+    </div>
+    <div class="chart-body" style="height:220px;padding-top:8px;"><canvas id="dailyChart"></canvas></div>
+  </div>
+
+  <div class="footer">
+    <div class="footer-note">This report covers DR performance for Main Office Tower, Andhra Pradesh region, May 2025.</div>
+    <div class="footer-brand"><span>elements</span> energy · May 2025</div>
+  </div>
+</div>
+
+
+<!-- PAGE 2 -->
+<div class="page" id="page2">
+  <span class="page-label">Page 2 of 2</span>
+  <div class="p2-header">
+    <div class="p2-logo">
+      <svg width="22" height="22" viewBox="0 0 28 28" fill="none">
+        <circle cx="11" cy="16" r="10" fill="#2A5C3F"/>
+        <circle cx="20" cy="10" r="8" fill="#6EAB85"/>
+        <path d="M17 8L22 8M16 11L23 11M18 14L22 14" stroke="#1A3D2B" stroke-width="1.4" stroke-linecap="round"/>
+      </svg>
+      <span class="p2-logo-text">elements <span>energy</span></span>
+    </div>
+    <span class="p2-title">Event-Level Summary &nbsp;·&nbsp; May 2025 &nbsp;·&nbsp; Main Office Tower</span>
+  </div>
+
+  <div class="chapter"><div class="chapter-num">5</div><div class="chapter-label">Event-Level Summary</div><div class="chapter-line"></div></div>
+
+  <table class="evt-tbl">
+    <thead><tr><th>Date</th><th>Day</th><th>Window</th><th>Target Reduction</th><th>Actual Reduction</th><th>kWh Shifted</th><th>Savings (₹)</th><th>Result</th></tr></thead>
+    <tbody>      <tr><td>Jan 5, 2025</td><td>Sunday</td><td>6–9 PM</td><td>20%</td><td>6%</td><td>12 kWh</td><td>₹660</td><td><span class="badge badge-m">Missed</span></td></tr>
+      <tr><td>Jan 9, 2025</td><td>Thursday</td><td>6–9 PM</td><td>15%</td><td>17%</td><td>34 kWh</td><td>₹1,870</td><td><span class="badge badge-a">Achieved</span></td></tr>
+      <tr><td>Jan 12, 2025</td><td>Sunday</td><td>6–9 AM</td><td>15%</td><td>18%</td><td>28 kWh</td><td>₹1,540</td><td><span class="badge badge-a">Achieved</span></td></tr>
+      <tr><td>Jan 14, 2025</td><td>Tuesday</td><td>6–9 PM</td><td>20%</td><td>9%</td><td>18 kWh</td><td>₹990</td><td><span class="badge badge-m">Missed</span></td></tr>
+      <tr><td>Jan 16, 2025</td><td>Thursday</td><td>6–9 PM</td><td>15%</td><td>16%</td><td>32 kWh</td><td>₹1,760</td><td><span class="badge badge-a">Achieved</span></td></tr>
+      <tr><td>Jan 19, 2025</td><td>Sunday</td><td>6–9 AM</td><td>15%</td><td>19%</td><td>38 kWh</td><td>₹2,090</td><td><span class="badge badge-a">Achieved</span></td></tr>
+      <tr><td>Jan 21, 2025</td><td>Tuesday</td><td>6–9 PM</td><td>15%</td><td>14%</td><td>28 kWh</td><td>₹1,540</td><td><span class="badge badge-m">Missed</span></td></tr>
+      <tr><td>Jan 23, 2025</td><td>Thursday</td><td>6–9 PM</td><td>15%</td><td>18%</td><td>36 kWh</td><td>₹1,980</td><td><span class="badge badge-a">Achieved</span></td></tr>
+      <tr><td>Jan 26, 2025</td><td>Sunday</td><td>6–9 AM</td><td>15%</td><td>21%</td><td>42 kWh</td><td>₹2,310</td><td><span class="badge badge-a">Achieved</span></td></tr>
+      <tr><td>Jan 28, 2025</td><td>Tuesday</td><td>6–9 PM</td><td>15%</td><td>16%</td><td>32 kWh</td><td>₹1,760</td><td><span class="badge badge-a">Achieved</span></td></tr>
+      <tr><td>Jan 30, 2025</td><td>Thursday</td><td>6–9 PM</td><td>20%</td><td>22%</td><td>44 kWh</td><td>₹2,420</td><td><span class="badge badge-a">Achieved</span></td></tr></tbody>
+  </table>
+
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:10px;">
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 14px;">
+      <div style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-light);margin-bottom:5px;">Total Events</div>
+      <div style="font-size:22px;font-weight:700;font-family:'Google Sans Mono',monospace;color:var(--ink);">11</div>
+      <div style="font-size:10.5px;color:var(--ink-light);">This month</div>
+    </div>
+    <div style="background:var(--lichen-tint);border:1px solid rgba(110,171,133,.3);border-radius:8px;padding:12px 14px;">
+      <div style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--lichen-deep);margin-bottom:5px;">Achieved</div>
+      <div style="font-size:22px;font-weight:700;font-family:'Google Sans Mono',monospace;color:var(--lichen-deep);">8</div>
+      <div style="font-size:10.5px;color:var(--lichen-deep);opacity:.7;">73% success rate</div>
+    </div>
+    <div style="background:var(--alert-pale);border:1px solid rgba(217,79,46,.2);border-radius:8px;padding:12px 14px;">
+      <div style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--alert);margin-bottom:5px;">Missed</div>
+      <div style="font-size:22px;font-weight:700;font-family:'Google Sans Mono',monospace;color:var(--alert);">3</div>
+      <div style="font-size:10.5px;color:var(--alert);opacity:.7;">All evening events</div>
+    </div>
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 14px;">
+      <div style="font-size:9.5px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--ink-light);margin-bottom:5px;">Total kWh Shifted</div>
+      <div style="font-size:22px;font-weight:700;font-family:'Google Sans Mono',monospace;color:var(--ink);">344</div>
+      <div style="font-size:10.5px;color:var(--ink-light);">kWh across all events</div>
+    </div>
+  </div>
+
+  <div class="evt-note" style="margin-top:10px;">
+    <strong>Pattern observed:</strong> All 3 missed events occurred during 6–9 PM windows.
+    Morning DR events (6–9 AM) achieved 100% success with an average overperformance of +4%.
+    Focusing improvement efforts on evening response will directly close the participation gap.
+  </div>
+
+  <div style="margin-top:16px;">
+    <div class="chapter" style="margin-top:0;margin-bottom:10px;"><div class="chapter-num">6</div><div class="chapter-label">Action Plan — Next Month</div><div class="chapter-line"></div></div>
+    <div class="action-panel">
+      <div class="action-panel-head">
+        <span class="action-eyebrow">Recommendations</span>
+        <span class="action-heading">3 things to act on this month</span>
+      </div>
+      <div class="action-items">      <div class="action-item"><div class="action-num">1</div><div class="action-text">Most missed savings occurred during evening peak (6–9 PM) due to reduced response to DR alerts. Improving evening response alone could unlock <strong>₹1.4–1.6 lakh annually</strong> for this site.</div></div>
+      <div class="action-item"><div class="action-num">2</div><div class="action-text">If you were powered by solar, your monthly bill would be <strong>₹12,400</strong> — a saving of over ₹33,000/month compared to your current grid bill.</div></div>
+      <div class="action-item"><div class="action-num">3</div><div class="action-text">Target a minimum <strong>15% reduction</strong> during all 6–9 PM DR events. Shift non-critical loads (HVAC pre-cooling, water pumps) before 6 PM to make this achievable.</div></div></div>
+    </div>
+  </div>
+
+  <div class="footer" style="margin-top:24px;">
+    <div class="footer-note">Event data represents verified DR responses. kWh shifted calculated against baseline day consumption profiles.</div>
+    <div class="footer-brand"><span>elements</span> energy · May 2025</div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/chartjs-plugin-datalabels/2.2.0/chartjs-plugin-datalabels.min.js"></script>
+<script>
+Chart.register(ChartDataLabels);
+Chart.defaults.plugins.datalabels.display = false;
+
+const dailyConsumption = [310, 230, 420, 265, 200, 340, 390, 250, 440, 295, 215, 370, 450, 240, 355, 415, 280, 230, 400, 335, 210, 430, 245, 385, 360, 220, 410, 345, 375, 430];
+const dailyDR          = [0, 0, 0, 0, 0, 0, 0, 0, 50, 0, 0, 42, 0, 27, 0, 65, 0, 0, 57, 0, 0, 42, 0, 0, 0, 80, 0, 63, 48, 66];
+const heatmapData      = [[1, 2, 1, 1, 3, 4, 2], [1, 1, 1, 1, 1, 2, 2], [3, 4, 3, 4, 4, 2, 1], [5, 6, 5, 5, 7, 3, 2], [7, 8, 7, 8, 9, 5, 4], [9, 10, 8, 10, 8, 6, 5]];
+const perfActual       = [18, 8];
+const perfBooked       = [20, 30];
+const perfMax          = [25, 32];
+const demandVals       = [1000,812,642];
+const lineAvg          = 328;
+const drMax            = 80;
+const labels30         = Array.from({length:30},(_,i)=>'May '+(i+1));
+
+const lineMaxV=Math.max(...dailyConsumption),lineMinV=Math.min(...dailyConsumption);
+const lineAnnot={id:'la',afterDatasetsDraw(chart){
+  const c=chart.ctx,ca=chart.chartArea,meta=chart.getDatasetMeta(0);
+  if(!meta?.data.length)return;
+  [[dailyConsumption.indexOf(lineMaxV),true],[dailyConsumption.indexOf(lineMinV),false]].forEach(([idx,isMax])=>{
+    const pt=meta.data[idx];if(!pt)return;
+    const lbl=(isMax?'Highest  ':'Lowest  ')+(isMax?lineMaxV:lineMinV)+' kWh';
+    const bg=isMax?'rgba(254,240,236,.95)':'rgba(235,246,240,.95)',fg=isMax?'#D94F2E':'#1a3d2b';
+    c.save();c.font='700 9px sans-serif';
+    const bw=c.measureText(lbl).width+14,bh=18;
+    const bx=Math.min(Math.max(pt.x-bw/2,ca.left),ca.right-bw),by=isMax?pt.y-bh-10:pt.y+10;
+    c.fillStyle=bg;c.beginPath();c.roundRect(bx,by,bw,bh,4);c.fill();
+    c.fillStyle=fg;c.textAlign='left';c.textBaseline='middle';c.fillText(lbl,bx+7,by+bh/2);
+    c.beginPath();c.arc(pt.x,pt.y,5,0,Math.PI*2);c.fillStyle=isMax?'#D94F2E':'#2A5C3F';c.fill();
+    c.strokeStyle='#fff';c.lineWidth=2;c.stroke();c.restore();
+  });
+}};
+new Chart(document.getElementById('hourlyChart'),{type:'bar',plugins:[],
+  data:{labels:labels30,datasets:[
+    {label:'Daily consumption',data:dailyConsumption,backgroundColor:'rgba(42,92,63,0.7)',borderColor:'#2A5C3F',borderWidth:1,borderRadius:3,barPercentage:0.6,datalabels:{display:false}},
+    {label:'Average',data:Array(30).fill(lineAvg),type:'line',borderColor:'rgba(42,92,63,.35)',borderWidth:1.5,borderDash:[6,4],pointRadius:0,fill:false,tension:0,datalabels:{display:false}}
+  ]},
+  options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:36,left:4,right:4,bottom:4}},
+    plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false,callbacks:{label:ctx=>ctx.datasetIndex===0?` Consumption: ${ctx.parsed.y} kWh`:` Avg: ${lineAvg} kWh`}}},
+    scales:{
+      x:{grid:{display:false},ticks:{color:'#7A8C7E',font:{size:9},maxRotation:0,autoSkip:true,maxTicksLimit:10},border:{display:false}},
+      y:{min:0,max:Math.ceil(lineMaxV/100)*100+80,grid:{color:'rgba(0,0,0,.04)'},ticks:{color:'#7A8C7E',font:{size:9},stepSize:100,callback:v=>v+' kWh'},border:{display:false}}
+    }
+  }
+});
+
+new Chart(document.getElementById('perfCombinedChart'),{type:'bar',
+  data:{labels:['Morning','Evening'],datasets:[
+    {label:'Actual',data:perfActual,backgroundColor:['#2A5C3F','#D94F2E'],borderRadius:3,barPercentage:0.7,categoryPercentage:0.8,datalabels:{display:true,color:'#fff',font:{size:9,weight:'700'},anchor:'end',align:'start',offset:4,formatter:v=>v+'%'}},
+    {label:'Booked%',data:perfBooked,backgroundColor:['rgba(110,171,133,.55)','rgba(217,79,46,.45)'],borderColor:['#2A5C3F','#D94F2E'],borderWidth:1.5,borderRadius:3,barPercentage:0.7,categoryPercentage:0.8,datalabels:{display:true,color:ctx=>ctx.dataIndex===0?'#1a3d2b':'#8B2A17',font:{size:9,weight:'700'},anchor:'end',align:'end',offset:4,formatter:v=>v+'%'}},
+    {label:'Max Potential',data:perfMax,backgroundColor:['rgba(110,171,133,.2)','rgba(217,79,46,.15)'],borderColor:['rgba(42,92,63,.5)','rgba(217,79,46,.5)'],borderWidth:1.5,borderRadius:3,barPercentage:0.7,categoryPercentage:0.8,datalabels:{display:true,color:ctx=>ctx.dataIndex===0?'#2A5C3F':'#D94F2E',font:{size:9,weight:'700'},anchor:'end',align:'end',offset:4,formatter:v=>v+'%'}}
+  ]},
+  options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,layout:{padding:{right:20}},
+    plugins:{legend:{display:false},tooltip:{mode:'index',intersect:false,callbacks:{label:ctx=>` ${ctx.dataset.label}: ${ctx.parsed.x}%`}}},
+    scales:{x:{min:0,max:Math.max(...perfMax)+10,grid:{color:'rgba(0,0,0,.04)'},ticks:{color:'#7A8C7E',font:{size:9},callback:v=>v+'%'},border:{display:false}},y:{grid:{display:false},ticks:{color:'#3A4A3D',font:{size:11,weight:'600'}},border:{display:false}}}
+  }
+});
+
+new Chart(document.getElementById('demandChart'),{type:'bar',
+  data:{labels:['Contract\nDemand','Max\nDemand','Avg\nDemand'],datasets:[{data:demandVals,backgroundColor:['rgba(91,146,173,.18)','rgba(217,79,46,.75)','rgba(110,171,133,.75)'],borderColor:['#5B92AD','#D94F2E','#2A5C3F'],borderWidth:1.5,borderRadius:4,borderSkipped:'bottom',datalabels:{display:true,anchor:'end',align:'top',offset:2,font:{size:9,weight:'700'},color:['#1E3F5A','#8B2A17','#1a3d2b'],formatter:v=>v+'\nkVA'}}]},
+  options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:28}},plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>` ${ctx.parsed.y} kVA`}}},scales:{x:{grid:{display:false},ticks:{color:'#7A8C7E',font:{size:9}},border:{display:false}},y:{min:0,max:Math.ceil(Math.max(...demandVals)/200)*200+200,grid:{color:'rgba(0,0,0,.04)'},ticks:{color:'#7A8C7E',font:{size:9},callback:v=>v+' kVA'},border:{display:false}}}}
+});
+
+(function(){
+  const cv=document.getElementById('heatmapChart'),W=cv.parentElement.clientWidth-32,H=160;
+  cv.width=W;cv.height=H;const ctx=cv.getContext('2d');
+  const days=['M','T','W','T','F','S','S'],hours=['12AM','4AM','8AM','12PM','4PM','8PM'];
+  const ramp=['#E8F3F8','#9DBFCE','#5B92AD','#F9C840','#E87820','#D94F2E'];
+  const cc=v=>v<=1?ramp[0]:v<=3?ramp[1]:v<=5?ramp[2]:v<=7?ramp[3]:v<=8?ramp[4]:ramp[5];
+  const lW=34,lH=16,cW=(W-lW)/7,cH=(H-lH)/6,gap=2;
+  ctx.font='700 9px sans-serif';ctx.fillStyle='#7A8C7E';ctx.textAlign='center';
+  days.forEach((d,j)=>ctx.fillText(d,lW+j*cW+cW/2,11));
+  ctx.textAlign='right';ctx.font='500 8.5px sans-serif';
+  hours.forEach((h,i)=>{
+    ctx.fillStyle='#7A8C7E';ctx.fillText(h,lW-4,lH+i*cH+cH/2+3);
+    days.forEach((_,j)=>{
+      ctx.fillStyle=cc(heatmapData[i][j]);
+      ctx.beginPath();ctx.roundRect(lW+j*cW+gap/2,lH+i*cH+gap/2,cW-gap,cH-gap,3);ctx.fill();
+    });
+  });
+})();
+
+const drAnnot={id:'da',afterDatasetsDraw(chart){
+  const c=chart.ctx,meta=chart.getDatasetMeta(0);
+  c.save();c.font='700 9px sans-serif';c.fillStyle='#1E3F5A';c.textAlign='center';c.textBaseline='bottom';
+  dailyDR.forEach((v,i)=>{if(v<=0)return;const b=meta.data[i];if(b)c.fillText(String(v),b.x,b.y-3);});
+  c.restore();
+}};
+new Chart(document.getElementById('dailyChart'),{type:'bar',plugins:[drAnnot],
+  data:{labels:labels30,datasets:[{label:'DR shifted',data:dailyDR,backgroundColor:'rgba(91,146,173,.55)',borderColor:'rgba(91,146,173,.9)',borderWidth:1,borderRadius:4,barPercentage:0.55}]},
+  options:{responsive:true,maintainAspectRatio:false,layout:{padding:{top:28,left:4,right:4,bottom:4}},
+    plugins:{legend:{display:false},datalabels:{display:false},tooltip:{mode:'index',intersect:false,callbacks:{label:ctx=>ctx.parsed.y>0?` DR shifted: ${ctx.parsed.y} kWh`:null}}},
+    scales:{
+      x:{grid:{display:false},ticks:{color:'#7A8C7E',font:{size:9},maxRotation:0,autoSkip:true,maxTicksLimit:10},border:{display:false}},
+      y:{min:0,max:Math.ceil(drMax/20)*20+20,grid:{color:'rgba(0,0,0,.04)'},ticks:{color:'#7A8C7E',font:{size:9},stepSize:20,callback:v=>v+' kWh'},border:{display:false}}
+    }
+  }
+});
+</script>
+</body>
+</html>
