@@ -68,9 +68,9 @@ def num(n):
     return f"{int(n):,}"
 
 # ── Computed values ───────────────────────────────────────────────────────────
-total_tariff_kwh  = d.offpeak_kwh + d.peak_kwh + d.normal_kwh
-offpeak_width     = round(d.offpeak_kwh / total_tariff_kwh * 100, 1)
-peak_width        = round(d.peak_kwh    / total_tariff_kwh * 100, 1)
+total_tariff_kvah = d.offpeak_kvah + d.peak_kvah + d.normal_kvah
+offpeak_width     = round(d.offpeak_kvah / total_tariff_kvah * 100, 1)
+peak_width        = round(d.peak_kvah    / total_tariff_kvah * 100, 1)
 normal_width      = round(100 - offpeak_width - peak_width, 1)
 part_pct          = round(d.participation_days / d.total_days * 100)
 part_bar_width    = min(round(d.participation_days / d.target_days * 100), 100)
@@ -79,17 +79,21 @@ morning_bar_pct   = round(d.missed_morning_inr / total_missed * 100) if total_mi
 line_avg          = round(sum(d.daily_consumption) / len(d.daily_consumption))
 dr_max            = max(d.daily_dr_shifted) if d.daily_dr_shifted else 0
 util_max_color    = "var(--alert)" if d.util_max_pct > 75 else "var(--lichen-deep)"
-achieved_events   = [e for e in d.events if e[7] == "Achieved"]
-missed_events     = [e for e in d.events if e[7] == "Missed"]
-total_kwh_shifted = sum(e[5] for e in d.events)
-success_rate      = round(len(achieved_events) / len(d.events) * 100) if d.events else 0
+real_events       = [e for e in d.events if e[0] != "—"]
+achieved_events   = [e for e in real_events if e[7] == "Achieved"]
+missed_events     = [e for e in real_events if e[7] == "Missed"]
+total_kwh_shifted = sum(e[5] for e in real_events)
+success_rate      = round(len(achieved_events) / len(real_events) * 100) if real_events else 0
 
 # ── chart_events_js — built before HTML f-string ─────────────────────────────
 from collections import defaultdict
 daily_shifted = defaultdict(float)
 for e in d.events:
-    day_num = str(int(e[0].split(",")[0].split(" ")[-1]))
-    daily_shifted[day_num] += float(e[5])
+    try:
+        day_num = str(int(e[0].split(",")[0].split(" ")[-1]))
+        daily_shifted[day_num] += float(e[5])
+    except (ValueError, IndexError):
+        pass
 
 chart_events_js = json.dumps([
     {"label": day, "shifted": round(val, 1)}
@@ -100,9 +104,12 @@ chart_events_js = json.dumps([
 daily_booked_map = defaultdict(float)
 daily_actual_map = defaultdict(float)
 for e in d.events:
-    day_num = str(int(e[0].split(",")[0].split(" ")[-1]))
-    daily_booked_map[day_num] += float(e[3])
-    daily_actual_map[day_num] += float(e[5])
+    try:
+        day_num = str(int(e[0].split(",")[0].split(" ")[-1]))
+        daily_booked_map[day_num] += float(e[3])
+        daily_actual_map[day_num] += float(e[5])
+    except (ValueError, IndexError):
+        pass
 
 all_days_list    = [str(i) for i in range(1, d.total_days + 1)]
 daily_booked_arr = [round(daily_booked_map.get(dd, 0), 1) for dd in all_days_list]
@@ -139,9 +146,12 @@ def why_items():
 
 def tariff_treemap():
     segments = [
-        ("Off-Peak", d.offpeak_kwh, d.offpeak_inr, "#6EAB85"),
-        ("Peak",     d.peak_kwh,    d.peak_inr,    "#D94F2E"),
-        ("Normal",   d.normal_kwh,  d.normal_inr,  "#E8A800"),
+        ("Peak",   d.peak_kvah,   d.peak_inr,   "#D94F2E"),
+        ("Normal", d.normal_kvah, d.normal_inr, "#E8A800"),
+    ] if d.category == "COMMERCIAL-HT" else [
+        ("Off-Peak", d.offpeak_kvah, d.offpeak_inr, "#6EAB85"),
+        ("Peak",     d.peak_kvah,    d.peak_inr,    "#D94F2E"),
+        ("Normal",   d.normal_kvah,  d.normal_inr,  "#E8A800"),
     ]
     segments.sort(key=lambda x: x[2], reverse=True)
     big   = segments[0]
@@ -150,17 +160,18 @@ def tariff_treemap():
     def block(label, kwh, inr_val, color, flex):
         return (
             f'<div style="flex:{flex};background:{color};display:flex;flex-direction:column;'
-            f'justify-content:flex-start;padding:7px 8px;min-width:0;">'
+            f'justify-content:flex-start;padding:7px 8px;min-width:80px;">'
             f'<div style="font-size:7.5px;font-weight:700;color:rgba(255,255,255,.85);text-transform:uppercase;letter-spacing:.04em;margin-bottom:3px;">{label}</div>'
             f'<div style="font-size:13px;font-weight:700;color:#fff;font-family:\'Google Sans Mono\',monospace;line-height:1;">{inr(inr_val)}</div>'
-            f'<div style="font-size:9px;color:#fff;margin-top:2px;">{num(kwh)} kWh</div>'
+            f'<div style="font-size:9px;color:#fff;margin-top:2px;">{num(kwh)} kVAh</div>'
             f'</div>'
         )
 
     left  = block(big[0], big[1], big[2], big[3], big[2])
     right_inner = "".join(block(s[0], s[1], s[2], s[3], s[2]) for s in small)
+    right_flex = sum(s[2] for s in small)
     right = (
-        f'<div style="flex:{small[0][2]+small[1][2]};display:flex;flex-direction:column;gap:3px;min-width:0;">'
+        f'<div style="flex:{right_flex};display:flex;flex-direction:column;gap:3px;min-width:70px;">'
         + right_inner +
         f'</div>'
     )
@@ -184,7 +195,6 @@ def stat_cards_block():
     <div class="card" style="padding:14px 16px;background:var(--alert-pale);border-color:rgba(217,79,46,.2);">
       <div class="card-title" style="margin-bottom:5px;color:var(--alert);">Missed</div>
       <div style="font-size:22px;font-weight:700;font-family:'Google Sans Mono',monospace;color:var(--alert);">{len(missed_events)}</div>
-      <div style="font-size:10.5px;color:var(--alert);opacity:.7;">Evening events</div>
     </div>
     <div class="card" style="padding:14px 16px;">
       <div class="card-title" style="margin-bottom:5px;">Total kWh Shifted</div>
@@ -264,20 +274,18 @@ def table_page_html(page_index_within_table, events_chunk, is_last_chunk, global
     <div class="p2-logo">
       <img src="data:image/png;base64,{icon_b64}" style="height:50px;width:auto;" />
     </div>
-    <span class="p2-title">Event-Level Summary &nbsp;·&nbsp; {d.month} &nbsp;·&nbsp; {d.site}</span>
+    <span class="p2-title">Event-Level Summary  &nbsp;·&nbsp; {d.month} &nbsp;·&nbsp; {d.site}</span>
   </div>
 """
     chapter_block = (
-        '<div class="chapter" style="margin-top:0;"><div class="chapter-num">5</div>'
-        '<div class="chapter-label">Event-Level Summary</div><div class="chapter-line"></div></div>'
+        '<div class="chapter" style="margin-top:0;"><div class="chapter-label"></div><div class="chapter-line"></div></div>'
         if is_first else
-        '<div class="chapter" style="margin-top:0;"><div class="chapter-num">5</div>'
-        '<div class="chapter-label">Event-Level Summary (continued)</div><div class="chapter-line"></div></div>'
+        '<div class="chapter" style="margin-top:0;"><div class="chapter-label"></div><div class="chapter-line"></div></div>'
     )
 
     table_block = f"""
   <table class="evt-tbl">
-    <thead><tr><th>Date</th><th>Day</th><th>Window</th><th>Target (kWh)</th><th>Shifted (kWh)</th><th>Savings (₹)</th><th>Result</th></tr></thead>
+    <thead><tr><th>Date</th><th>Day</th><th>Window</th><th>Booked (kWh)</th><th>Shifted (kWh)</th><th>Savings (₹)</th><th>Result</th></tr></thead>
     <tbody>{event_rows(events_chunk)}</tbody>
   </table>"""
 
@@ -287,14 +295,7 @@ def table_page_html(page_index_within_table, events_chunk, is_last_chunk, global
 {stat_cards_block()}
 
   <div style="margin-top:16px;">
-    <div class="chapter" style="margin-top:0;margin-bottom:10px;"><div class="chapter-num">6</div><div class="chapter-label">Action Plan — Next Month</div><div class="chapter-line"></div></div>
-    <div class="action-panel">
-      <div class="action-panel-head">
-        <span class="action-eyebrow">Recommendations</span>
-        <span class="action-heading">{len(d.actions)} things to act on this month</span>
-      </div>
-      <div class="action-items">{action_items()}</div>
-    </div>
+
   </div>"""
 
     footer_block = f"""
@@ -475,13 +476,13 @@ canvas{{display:block;}}
       <div class="kpi-half bottom">
         <div class="kpi-top"><div class="kpi-dot" style="background:#F28B72;"></div><div class="kpi-lbl">Missed Savings</div></div>
         <div class="kpi-val">{inr(d.missed_savings)}</div>
-        <div class="kpi-sub">{d.missed_savings_note}</div>
+        
       </div>
     </div>
     <div class="kpi k-neutral" style="display:flex;flex-direction:column;justify-content:center;gap:0;">
       <div style="padding-bottom:10px;border-bottom:1px solid var(--border);">
         <div class="kpi-top"><div class="kpi-dot" style="background:var(--ink-light);"></div><div class="kpi-lbl">Total Energy Consumed</div></div>
-        <div class="kpi-val">{num(d.total_energy_kwh)}<span style="font-size:14px;font-weight:500;color:var(--ink-light);font-family:'Google Sans',sans-serif;"> kWh</span></div>
+        <div class="kpi-val">{num(d.total_energy_kvah)}<span style="font-size:14px;font-weight:500;color:var(--ink-light);font-family:'Google Sans',sans-serif;"> kVAh</span></div>
         <div class="kpi-sub">This month</div>
       </div>
       <div style="padding-top:10px;">
@@ -491,7 +492,7 @@ canvas{{display:block;}}
       </div>
     </div>
     <div class="kpi" style="padding:14px 16px 12px;">
-      <div class="kpi-top" style="margin-bottom:9px;"><div class="kpi-dot" style="background:var(--monsoon);"></div><div class="kpi-lbl">Tariff Split — kWh</div></div>
+      <div class="kpi-top" style="margin-bottom:9px;"><div class="kpi-dot" style="background:var(--monsoon);"></div><div class="kpi-lbl">Tariff Split — kVAh</div></div>
       <div style="display:flex;height:110px;gap:3px;border-radius:6px;overflow:hidden;margin-bottom:9px;">
         {tariff_treemap()}
       </div>
@@ -517,7 +518,8 @@ canvas{{display:block;}}
   <div class="chart-card" style="margin-bottom:12px;">
     <div class="chart-head">
       <div style="display:flex;align-items:center;gap:16px;">
-        <span class="chart-title">Daily Energy — {d.month}</span>
+        <span class="chart-title">
+        Consumption — {d.month}</span>
         <div class="legend">
           <span><span style="display:inline-block;width:18px;height:2px;background:#2A5C3F;vertical-align:middle;margin-right:4px;"></span>Daily consumption</span>
           <span><span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#D94F2E;vertical-align:middle;margin-right:4px;"></span>Highest</span>
@@ -530,24 +532,13 @@ canvas{{display:block;}}
   </div>
 
   <div style="display:grid;grid-template-columns:1fr 2fr;gap:12px;margin-bottom:12px;">
-    <div class="card">
+    <div class="card" style="display:flex;flex-direction:column;">
       <div class="card-title">Missed Savings</div>
-      <div class="mbar" style="margin-bottom:24px;">
-        <div class="mbar-header">
-          <span class="mbar-name">☀️ Morning<span class="mbar-time"> 6–9 AM</span></span>
-          <span class="mbar-amt" style="color:var(--ink-mid);font-size:11px;font-weight:500;">{inr(d.missed_morning_inr + d.achieved_morning_inr)}</span>
-        </div>
-        <div class="mbar-track">
-          <div style="width:{round((d.missed_morning_inr/(d.missed_morning_inr+d.achieved_morning_inr)*100) if (d.missed_morning_inr+d.achieved_morning_inr)>0 else 0,1)}%;height:100%;background:var(--alert);border-radius:4px;"></div>
-        </div>
-        <div style="display:flex;justify-content:space-between;margin-top:4px;">
-          <span style="font-size:12px;color:var(--alert);font-weight:700;">Missed {inr(d.missed_morning_inr)}</span>
-          <span style="font-size:9.5px;color:var(--ink-light);">{round((d.missed_morning_inr/(d.missed_morning_inr+d.achieved_morning_inr)*100) if (d.missed_morning_inr+d.achieved_morning_inr)>0 else 0)}% of total</span>
-        </div>
-      </div>
+      <div style="flex:1;display:flex;flex-direction:column;{'justify-content:center;' if d.category == 'COMMERCIAL-HT' else ''}">
+      {'<div class="mbar" style="margin-bottom:24px;"><div class="mbar-header"><span class="mbar-name">☀️ Morning<span class="mbar-time"> 6–10 AM</span></span><span class="mbar-amt" style="color:var(--ink-mid);font-size:11px;font-weight:500;">' + inr(d.missed_morning_inr + d.achieved_morning_inr) + '</span></div><div class="mbar-track"><div style="width:' + str(round((d.missed_morning_inr/(d.missed_morning_inr+d.achieved_morning_inr)*100) if (d.missed_morning_inr+d.achieved_morning_inr)>0 else 0,1)) + '%;height:100%;background:var(--alert);border-radius:4px;"></div></div><div style="display:flex;justify-content:space-between;margin-top:4px;"><span style="font-size:12px;color:var(--alert);font-weight:700;">Missed ' + inr(d.missed_morning_inr) + '</span><span style="font-size:9.5px;color:var(--ink-light);">' + str(round((d.missed_morning_inr/(d.missed_morning_inr+d.achieved_morning_inr)*100) if (d.missed_morning_inr+d.achieved_morning_inr)>0 else 0)) + '% of total</span></div></div>' if d.category != 'COMMERCIAL-HT' else ''}
       <div class="mbar">
         <div class="mbar-header">
-          <span class="mbar-name">🌙 Evening<span class="mbar-time"> 6–9 PM</span></span>
+          <span class="mbar-name"><svg width="13" height="13" viewBox="0 0 24 24" style="vertical-align:-2px;margin-right:3px;"><defs><mask id="moonMask"><rect width="24" height="24" fill="white"/><circle cx="15" cy="9" r="8" fill="black"/></mask></defs><circle cx="12" cy="12" r="9" fill="var(--monsoon)" mask="url(#moonMask)"/></svg> Evening<span class="mbar-time"> 6–10 PM</span></span>
           <span class="mbar-amt" style="color:var(--ink-mid);font-size:11px;font-weight:500;">{inr(d.missed_evening_inr + d.achieved_evening_inr)}</span>
         </div>
         <div class="mbar-track">
@@ -557,6 +548,7 @@ canvas{{display:block;}}
           <span style="font-size:12px;color:var(--alert);font-weight:700;">Missed {inr(d.missed_evening_inr)}</span>
           <span style="font-size:9.5px;color:var(--ink-light);">{round((d.missed_evening_inr/(d.missed_evening_inr+d.achieved_evening_inr)*100) if (d.missed_evening_inr+d.achieved_evening_inr)>0 else 0)}% of total</span>
         </div>
+      </div>
       </div>
     </div>
     <div class="card" style="display:flex;flex-direction:column;">
@@ -572,17 +564,15 @@ canvas{{display:block;}}
     </div>
   </div>
 
-  <div class="chapter" style="margin-top:20px;"><div class="chapter-num" style="background:var(--monsoon-deep);">3</div><div class="chapter-label">Peak Demand Analysis</div><div class="chapter-line"></div></div>
+  <div class="chapter" style="margin-top:20px;"><div class="chapter-num">3</div><div class="chapter-label">Peak Demand Analysis</div><div class="chapter-line"></div></div>
 
-  <div style="display:grid;grid-template-columns:200px 1fr 1.6fr;gap:12px;margin-bottom:12px;">
+  <div style="display:grid;grid-template-columns:200px 1fr 1.6fr;gap:20px;margin-bottom:12px;">
     <div class="card" style="display:flex;flex-direction:column;justify-content:flex-start;gap:0;">
       <div class="card-title">Demand Overview</div>
-      <div style="display:flex;flex-direction:column;gap:0;">
+        <div style="display:flex;flex-direction:column;gap:0;">
         <div style="display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--border);"><span style="font-size:11px;color:var(--ink-mid);">Contract Demand</span><span style="font-size:12px;font-weight:700;font-family:'Google Sans Mono',monospace;color:var(--ink);">{num(d.contract_demand)} kVA</span></div>
         <div style="display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--border);"><span style="font-size:11px;color:var(--ink-mid);">Maximum Demand</span><span style="font-size:12px;font-weight:700;font-family:'Google Sans Mono',monospace;color:var(--alert);">{num(d.max_demand)} kVA</span></div>
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--border);"><span style="font-size:11px;color:var(--ink-mid);">Average Demand</span><span style="font-size:12px;font-weight:700;font-family:'Google Sans Mono',monospace;color:var(--lichen-deep);">{num(d.avg_demand)} kVA</span></div>
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--border);"><span style="font-size:11px;color:var(--ink-mid);">Utilization (Max)</span><span style="font-size:12px;font-weight:700;font-family:'Google Sans Mono',monospace;color:{util_max_color};">{d.util_max_pct}%</span></div>
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:11px 0;"><span style="font-size:11px;color:var(--ink-mid);">Utilization (Avg)</span><span style="font-size:12px;font-weight:700;font-family:'Google Sans Mono',monospace;color:var(--lichen-deep);">{d.util_avg_pct}%</span></div>
+
       </div>
     </div>
     <div class="card" style="display:flex;flex-direction:column;">
@@ -630,7 +620,7 @@ canvas{{display:block;}}
         <span class="chart-title">DR Shifted — {d.month}</span>
         <div class="legend">
           <span><span class="lswatch" style="background:#1B3A6B;"></span>Actual Shifted (kWh)</span>
-          <span><span style="display:inline-block;width:18px;height:0;border-top:2px dashed #5B92AD;vertical-align:middle;margin-right:4px;"></span>Booked Target (kWh)</span>
+          <span><span style="display:inline-block;width:18px;height:0;border-top:2px dashed #5B92AD;vertical-align:middle;margin-right:4px;"></span>Booked(kWh)</span>
           <span><span class="lswatch" style="background:rgba(180,210,230,0.5);border:1px solid rgba(91,146,173,0.5);"></span>Under-delivery</span>
           <span><span class="lswatch" style="background:#4CAF82;"></span>Over-delivery</span>
           <span><span class="lswatch" style="background:repeating-linear-gradient(45deg,rgba(91,146,173,0.3) 0,rgba(91,146,173,0.3) 1px,transparent 1px,transparent 3px);border:1px dashed rgba(91,146,173,0.4);"></span>No Booking</span>
@@ -642,7 +632,7 @@ canvas{{display:block;}}
 {legend_cards_block()}
 
   <table class="evt-tbl" style="margin-top:16px;">
-    <thead><tr><th>Date</th><th>Day</th><th>Window</th><th>Target (kWh)</th><th>Shifted (kWh)</th><th>Savings (₹)</th><th>Result</th></tr></thead>
+    <thead><tr><th>Date</th><th>Day</th><th>Window</th><th>Booked (kWh)</th><th>Shifted (kWh)</th><th>Savings (₹)</th><th>Result</th></tr></thead>
     <tbody>{event_rows(page2_events)}</tbody>
   </table>
 
@@ -696,9 +686,10 @@ const labels           = Array.from({{length:totalDays}},(_,i)=>'{d.month[:3]} '
       c.fillStyle = '#5B92AD';
       c.textAlign = 'left';
       c.textBaseline = 'middle';
-      c.fillText('~' + lineAvg + ' kWh', chart.chartArea.right + 4, avgY);
+      c.fillText('~' + lineAvg + ' kVAh', chart.chartArea.right + 4, avgY);
       c.restore();
       const maxBar = meta.data[maxIdx];
+      const minBar = meta.data[minIdx];
       if (maxBar) {{
         c.save();
         c.beginPath();
@@ -709,10 +700,9 @@ const labels           = Array.from({{length:totalDays}},(_,i)=>'{d.month[:3]} '
         c.fillStyle = '#D94F2E';
         c.textAlign = 'center';
         c.textBaseline = 'bottom';
-        c.fillText(lineMaxV + ' kWh', maxBar.x, maxBar.y - 12);
+        c.fillText(lineMaxV + ' kVAh', maxBar.x, maxBar.y - 12);
         c.restore();
       }}
-      const minBar = meta.data[minIdx];
       if (minBar) {{
         c.save();
         c.beginPath();
@@ -723,9 +713,9 @@ const labels           = Array.from({{length:totalDays}},(_,i)=>'{d.month[:3]} '
         c.fillStyle = '#A87800';
         c.textAlign = 'center';
         c.textBaseline = 'bottom';
-        c.fillText(lineMinV + ' kWh', minBar.x, minBar.y - 12);
+        c.fillText(lineMinV + ' kVAh', minBar.x, minBar.y - 12);
         c.restore();
-      }}
+      }}   
     }}
   }};
 
@@ -738,27 +728,42 @@ const labels           = Array.from({{length:totalDays}},(_,i)=>'{d.month[:3]} '
     options:{{
       responsive:true, maintainAspectRatio:false, devicePixelRatio:dpr,
       layout:{{padding:{{top:36,left:4,right:55,bottom:4}}}},
-      plugins:{{legend:{{display:false}},tooltip:{{mode:'index',intersect:false,callbacks:{{label:ctx=>ctx.datasetIndex===0?` Consumption: ${{ctx.parsed.y}} kWh`:` Avg: ${{lineAvg}} kWh`}}}}}},
+      plugins:{{legend:{{display:false}},tooltip:{{mode:'index',intersect:false,callbacks:{{llabel:ctx=>ctx.datasetIndex===0?` Consumption: ${{ctx.parsed.y}} kVAh`:` Avg: ${{lineAvg}} kVAh`}}}}}},
       scales:{{
         x:{{grid:{{display:false}},ticks:{{color:'#3A4A3D',font:{{size:9,weight:'500'}},maxRotation:0,autoSkip:true,maxTicksLimit:10}},border:{{display:false}}}},
-        y:{{min:0,max:Math.ceil(lineMaxV/100)*100+80,grid:{{color:'rgba(0,0,0,.06)'}},ticks:{{color:'#3A4A3D',font:{{size:9,weight:'500'}},stepSize:100,callback:v=>v+' kWh'}},border:{{display:false}}}}
+        y:{{min:0,max:Math.ceil(lineMaxV/100)*100+80,grid:{{color:'rgba(0,0,0,.06)'}},ticks:{{color:'#3A4A3D',font:{{size:9,weight:'500'}},stepSize:100,callback:v=>v+' kVAh'}},border:{{display:false}}}}
       }}
     }}
   }});
 }})();
 
 // ── Performance chart ─────────────────────────────────────────────────────────
-new Chart(document.getElementById('perfCombinedChart'),{{type:'bar',
-  data:{{labels:['Morning','Evening'],datasets:[
-    {{label:'Actual',data:perfActual,backgroundColor:['#2A5C3F','#D94F2E'],borderRadius:3,barPercentage:0.7,categoryPercentage:0.8,datalabels:{{display:true,color:ctx=>ctx.dataIndex===0?'#1a3d2b':'#8B2A17',font:{{size:9,weight:'700'}},anchor:'end',align:'end',offset:4,formatter:v=>v+'%'}}}},
-    {{label:'Booked',data:perfBooked,backgroundColor:['rgba(110,171,133,.55)','rgba(217,79,46,.45)'],borderColor:['#2A5C3F','#D94F2E'],borderWidth:1.5,borderRadius:3,barPercentage:0.7,categoryPercentage:0.8,datalabels:{{display:true,color:ctx=>ctx.dataIndex===0?'#1a3d2b':'#8B2A17',font:{{size:9,weight:'700'}},anchor:'end',align:'end',offset:4,formatter:v=>v+'%'}}}},
-    {{label:'Max Potential',data:perfMax,backgroundColor:['rgba(110,171,133,.2)','rgba(217,79,46,.15)'],borderColor:['rgba(42,92,63,.5)','rgba(217,79,46,.5)'],borderWidth:1.5,borderRadius:3,barPercentage:0.7,categoryPercentage:0.8,datalabels:{{display:true,color:ctx=>ctx.dataIndex===0?'#2A5C3F':'#D94F2E',font:{{size:9,weight:'700'}},anchor:'end',align:'end',offset:4,formatter:v=>v+'%'}}}}
-  ]}},
-  options:{{indexAxis:'y',responsive:true,maintainAspectRatio:false,layout:{{padding:{{right:20}}}},
-    plugins:{{legend:{{display:false}},tooltip:{{mode:'index',intersect:false,callbacks:{{label:ctx=>` ${{ctx.dataset.label}}: ${{ctx.parsed.x}}%`}}}}}},
-    scales:{{x:{{min:0,max:Math.max(...perfActual,...perfBooked,...perfMax)+10,grid:{{color:'rgba(0,0,0,.04)'}},ticks:{{color:'#7A8C7E',font:{{size:9}},callback:v=>v+'%'}},border:{{display:false}}}},y:{{grid:{{display:false}},ticks:{{color:'#3A4A3D',font:{{size:11,weight:'600'}}}},border:{{display:false}}}}}}
-  }}
-}});
+(function(){{
+  const isCommercial = {"true" if d.category == "COMMERCIAL-HT" else "false"};
+  const perfLabels  = isCommercial ? ['Evening'] : ['Morning','Evening'];
+  const pActual     = isCommercial ? [perfActual[1]] : perfActual;
+  const pBooked     = isCommercial ? [perfBooked[1]] : perfBooked;
+  const pMax        = isCommercial ? [perfMax[1]]    : perfMax;
+  const barColors   = isCommercial ? ['#2A5C3F'] : ['#2A5C3F','#2A5C3F'];
+  const barColorsB  = isCommercial ? ['rgba(110,171,133,.55)'] : ['rgba(110,171,133,.55)','rgba(110,171,133,.55)'];
+  const barBorderB  = isCommercial ? ['#2A5C3F'] : ['#2A5C3F','#2A5C3F'];
+  const barColorsM  = isCommercial ? ['rgba(110,171,133,.2)'] : ['rgba(110,171,133,.2)','rgba(110,171,133,.2)'];
+  const barBorderM  = isCommercial ? ['rgba(42,92,63,.5)'] : ['rgba(42,92,63,.5)','rgba(42,92,63,.5)'];
+  const labelColors = isCommercial ? ['#1a3d2b'] : ['#1a3d2b','#1a3d2b'];
+  const labelColorsD= isCommercial ? ['#2A5C3F'] : ['#2A5C3F','#2A5C3F'];
+
+  new Chart(document.getElementById('perfCombinedChart'),{{type:'bar',
+    data:{{labels:perfLabels,datasets:[
+      {{label:'Actual',data:pActual,backgroundColor:barColors,borderRadius:3,barPercentage:0.7,categoryPercentage:0.8,datalabels:{{display:true,color:ctx=>labelColors[ctx.dataIndex],font:{{size:9,weight:'700'}},anchor:'end',align:'end',offset:4,formatter:v=>Math.round(v)+' kWh'}}}},
+      {{label:'Booked',data:pBooked,backgroundColor:barColorsB,borderColor:barBorderB,borderWidth:1.5,borderRadius:3,barPercentage:0.7,categoryPercentage:0.8,datalabels:{{display:true,color:ctx=>labelColors[ctx.dataIndex],font:{{size:9,weight:'700'}},anchor:'end',align:'end',offset:4,formatter:v=>Math.round(v)+' kWh'}}}},
+      {{label:'Max Potential',data:pMax,backgroundColor:barColorsM,borderColor:barBorderM,borderWidth:1.5,borderRadius:3,barPercentage:0.7,categoryPercentage:0.8,datalabels:{{display:true,color:ctx=>labelColorsD[ctx.dataIndex],font:{{size:9,weight:'700'}},anchor:'end',align:'end',offset:4,formatter:v=>Math.round(v)+' kWh'}}}}
+    ]}},
+    options:{{indexAxis:'y',responsive:true,maintainAspectRatio:false,layout:{{padding:{{right:20}}}},
+      plugins:{{legend:{{display:false}},tooltip:{{mode:'index',intersect:false,callbacks:{{label:ctx=>` ${{ctx.dataset.label}}: ${{Math.round(ctx.parsed.x)}} kWh`}}}}}},
+      scales:{{x:{{min:0,max:Math.max(...pActual,...pBooked,...pMax)*1.15,grid:{{color:'rgba(0,0,0,.04)'}},ticks:{{color:'#7A8C7E',font:{{size:9}},callback:v=>Math.round(v)+' kWh'}},border:{{display:false}}}},y:{{grid:{{display:false}},ticks:{{color:'#3A4A3D',font:{{size:11,weight:'600'}}}},border:{{display:false}}}}}}
+    }}
+  }});
+}})();
 
 // ── Demand chart ──────────────────────────────────────────────────────────────
 new Chart(document.getElementById('demandChart'),{{type:'bar',
@@ -852,7 +857,19 @@ new Chart(document.getElementById('demandChart'),{{type:'bar',
       const metaBase = chart.getDatasetMeta(0);
       const metaUnder= chart.getDatasetMeta(1);
       const metaOver = chart.getDatasetMeta(2);
+      const MIN_GAP  = 11;
       c.save();
+
+      const placedY = {{}};
+      const claimY = (dayIdx, desiredY) => {{
+        const existing = placedY[dayIdx];
+        const y = (existing !== undefined && desiredY > existing - MIN_GAP)
+          ? existing - MIN_GAP
+          : desiredY;
+        placedY[dayIdx] = y;
+        return y;
+      }};
+
       booked.forEach((bk, i) => {{
         if (bk <= 0) return;
         const barB   = metaBase.data[i];
@@ -870,32 +887,38 @@ new Chart(document.getElementById('demandChart'),{{type:'bar',
         c.setLineDash([]);
         const actualTop = yS.getPixelForValue(actual[i] || 0);
         if (bookedY < actualTop - 12 || under[i] > 2) {{
+          const labelY = claimY(i, bookedY - 3);
           c.font = '600 8px sans-serif'; c.fillStyle = '#5B92AD';
           c.textAlign = 'center'; c.textBaseline = 'bottom';
-          c.fillText(String(Math.round(bk)), cx, bookedY - 3);
+          c.fillText(String(Math.round(bk)), cx, labelY);
         }}
         c.restore();
       }});
+
       base.forEach((v, i) => {{
         if (v <= 0 || booked[i] <= 0) return;
         const bar = metaBase.data[i]; if (!bar) return;
         const barH = yS.getPixelForValue(0) - yS.getPixelForValue(v);
         if (barH < 6) return;
+        const labelY = claimY(i, yS.getPixelForValue(v) - 3);
         c.save();
         c.font = '700 8px sans-serif'; c.fillStyle = '#1B3A6B';
         c.textAlign = 'center'; c.textBaseline = 'bottom';
-        c.fillText(String(Math.round(v)), bar.x, yS.getPixelForValue(v) - 3);
+        c.fillText(String(Math.round(v)), bar.x, labelY);
         c.restore();
       }});
+
       over.forEach((v, i) => {{
         if (v <= 0) return;
         const bar = metaOver.data[i]; if (!bar) return;
+        const labelY = claimY(i, bar.y - 3);
         c.save();
         c.font = '700 8px sans-serif'; c.fillStyle = '#1a6b40';
         c.textAlign = 'center'; c.textBaseline = 'bottom';
-        c.fillText(String(Math.round(v)), bar.x, bar.y - 3);
+        c.fillText(String(Math.round(v)), bar.x, labelY);
         c.restore();
       }});
+
       c.restore();
     }}
   }};

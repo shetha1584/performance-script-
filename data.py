@@ -164,20 +164,24 @@ def fetch(msn, year, month):
     demand     = report.get("demand",  {})
     daily_list = report.get("daily_consumption", [])
     scno       = report.get("scno",    msn)
+    short_name = report.get("short_name")
     category   = report.get("category", "")
 
-    daily_kwh = [d["kwh"] for d in daily_list]
+    daily_kwh = [d["kvah"] for d in daily_list]
     while len(daily_kwh) < last_day:
         daily_kwh.append(0)
 
-    contract = demand.get("contract_demand") or 0
-    max_dem  = demand.get("max_demand")      or 0
-    avg_dem  = demand.get("avg_demand")      or 0
-    util_max = round((max_dem / contract) * 100) if contract else 0
-    util_avg = round((avg_dem / contract) * 100) if contract else 0
+    contract       = demand.get("contract_demand") or 0
+    max_dem        = demand.get("max_demand")      or 0
+    avg_dem        = demand.get("avg_demand")      or 0
+    util_max       = round((max_dem / contract) * 100) if contract else 0
+    util_avg       = round((avg_dem / contract) * 100) if contract else 0
+    util_max_count = demand.get("util_max_count", 0)
+    util_avg_count = demand.get("util_avg_count", 0)
 
     offpeak_rate_label = "₹5.55" if "INDUSTRY" in category else "₹7.65"
-    site_name = f"SCNO {scno}" if scno else msn
+    site_name = f"{short_name} · SCNO {scno}" if short_name and scno else \
+                (f"SCNO {scno}" if scno else msn)
 
     # ── unpack reportDRData ───────────────────────────────────────
     
@@ -210,12 +214,13 @@ def fetch(msn, year, month):
     ])
 
     return dict(
-        # META
+        ## META
         site         = site_name,
         month        = month_label,
         region       = "Andhra Pradesh",
         offpeak_rate = offpeak_rate_label,
         rank         = get_rank(msn),
+        category     = category,
 
         # STREAK — live
         streak             = streak_data["streak"],
@@ -225,16 +230,16 @@ def fetch(msn, year, month):
         target_pct         = 60,
 
         # KPIs — live
-        total_energy_kwh  = report.get("total_energy_kwh", 0),
+        total_energy_kvah = report.get("total_energy_kvah", 0),
         peak_demand_kva   = demand.get("peak_demand_kva",  0),
         peak_demand_note  = demand.get("peak_demand_note", ""),
 
         # Tariff — live
-        offpeak_kwh  = tariff.get("offpeak_kwh",  0),
+        offpeak_kvah = tariff.get("offpeak_kvah", 0),
         offpeak_inr  = tariff.get("offpeak_cost", 0),
-        peak_kwh     = tariff.get("peak_kwh",     0),
+        peak_kvah    = tariff.get("peak_kvah",    0),
         peak_inr     = tariff.get("peak_cost",    0),
-        normal_kwh   = tariff.get("normal_kwh",   0),
+        normal_kvah  = tariff.get("normal_kvah",  0),
         normal_inr   = tariff.get("normal_cost",  0),
         total_bill   = tariff.get("total_bill",   0),
 
@@ -244,6 +249,8 @@ def fetch(msn, year, month):
         avg_demand      = avg_dem,
         util_max_pct    = util_max,
         util_avg_pct    = util_avg,
+        util_max_count  = util_max_count,
+        util_avg_count  = util_avg_count,
 
         # Daily chart — live
         daily_consumption = daily_kwh,
@@ -252,7 +259,6 @@ def fetch(msn, year, month):
         dr_savings          = dr.get("dr_savings",          0),
         dr_savings_delta    = dr.get("dr_savings_delta",    "N/A"),
         missed_savings      = dr.get("missed_savings",      0),
-        missed_savings_note = dr.get("missed_savings_note", "No data"),
         missed_morning_inr  = dr.get("missed_morning_inr",  0),
         missed_evening_inr   = dr.get("missed_evening_inr",   0),
         achieved_morning_inr = dr.get("achieved_morning_inr", 0),
