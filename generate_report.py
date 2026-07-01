@@ -566,18 +566,24 @@ canvas{{display:block;}}
 
   <div class="chapter" style="margin-top:20px;"><div class="chapter-num">3</div><div class="chapter-label">Peak Demand Analysis</div><div class="chapter-line"></div></div>
 
-  <div style="display:grid;grid-template-columns:200px 1fr 1.6fr;gap:20px;margin-bottom:12px;">
-    <div class="card" style="display:flex;flex-direction:column;justify-content:flex-start;gap:0;">
-      <div class="card-title">Demand Overview</div>
-        <div style="display:flex;flex-direction:column;gap:0;">
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--border);"><span style="font-size:11px;color:var(--ink-mid);">Contract Demand</span><span style="font-size:12px;font-weight:700;font-family:'Google Sans Mono',monospace;color:var(--ink);">{num(d.contract_demand)} kVA</span></div>
-        <div style="display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-bottom:1px solid var(--border);"><span style="font-size:11px;color:var(--ink-mid);">Maximum Demand</span><span style="font-size:12px;font-weight:700;font-family:'Google Sans Mono',monospace;color:var(--alert);">{num(d.max_demand)} kVA</span></div>
-
-      </div>
-    </div>
-    <div class="card" style="display:flex;flex-direction:column;">
+  <div style="display:grid;grid-template-columns:1fr 1.6fr;gap:20px;margin-bottom:12px;">
+    <div class="card" style="display:flex;flex-direction:column;position:relative;">
       <div class="card-title">Demand (kVA)</div>
-      <div style="position:relative;flex:1;min-height:160px;"><canvas id="demandChart"></canvas></div>
+      <div style="position:absolute;top:14px;right:16px;display:flex;gap:16px;z-index:2;">
+        <div style="text-align:right;">
+          <div style="font-size:9px;color:var(--ink-light);display:flex;align-items:center;gap:4px;justify-content:flex-end;">
+            <span style="width:6px;height:6px;border-radius:50%;background:var(--ink);display:inline-block;"></span>Contract
+          </div>
+          <div style="font-size:12px;font-weight:700;font-family:'Google Sans Mono',monospace;color:var(--ink);">{num(d.contract_demand)} kVA</div>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-size:9px;color:var(--ink-light);display:flex;align-items:center;gap:4px;justify-content:flex-end;">
+            <span style="width:6px;height:6px;border-radius:50%;background:var(--alert);display:inline-block;"></span>Max
+          </div>
+          <div style="font-size:12px;font-weight:700;font-family:'Google Sans Mono',monospace;color:var(--alert);">{num(d.max_demand)} kVA</div>
+        </div>
+      </div>
+      <div style="position:relative;flex:1;min-height:160px;margin-top:6px;"><canvas id="demandChart"></canvas></div>
     </div>
     <div class="card">
       <div class="card-title">Peak occurrence by hour &amp; day</div>
@@ -595,7 +601,6 @@ canvas{{display:block;}}
       </div>
     </div>
   </div>
-
   <div class="footer">
     <div class="footer-note">{d.footer_p1}</div>
     <div class="footer-brand"><span>elements</span> energy · {d.month}</div>
@@ -767,8 +772,8 @@ const labels           = Array.from({{length:totalDays}},(_,i)=>'{d.month[:3]} '
 
 // ── Demand chart ──────────────────────────────────────────────────────────────
 new Chart(document.getElementById('demandChart'),{{type:'bar',
-  data:{{labels:['Contract\\nDemand','Max\\nDemand','Avg\\nDemand'],datasets:[{{data:[{d.contract_demand},{d.max_demand},{d.avg_demand}],backgroundColor:['rgba(91,146,173,.18)','rgba(217,79,46,.75)','rgba(110,171,133,.65)'],borderColor:['#5B92AD','#D94F2E','#2A5C3F'],borderWidth:1.5,borderRadius:4,borderSkipped:'bottom',datalabels:{{display:true,anchor:'end',align:'top',offset:2,font:{{size:9,weight:'700'}},color:['#1E3F5A','#8B2A17','#1a3d2b'],formatter:v=>v+'\\nkVA'}}}}]}},
-  options:{{responsive:true,maintainAspectRatio:false,layout:{{padding:{{top:28}}}},plugins:{{legend:{{display:false}},tooltip:{{callbacks:{{label:ctx=>` ${{ctx.parsed.y}} kVA`}}}}}},scales:{{x:{{grid:{{display:false}},ticks:{{color:'#7A8C7E',font:{{size:9}}}},border:{{display:false}}}},y:{{min:0,max:Math.ceil(Math.max({d.contract_demand},{d.max_demand},{d.avg_demand})/200)*200+200,grid:{{color:'rgba(0,0,0,.04)'}},ticks:{{color:'#7A8C7E',font:{{size:9}},callback:v=>v+' kVA'}},border:{{display:false}}}}}}}}
+  data:{{labels:['Contract\\nDemand','Max\\nDemand'],datasets:[{{data:[{d.contract_demand},{d.max_demand}],backgroundColor:['rgba(91,146,173,.18)','rgba(217,79,46,.75)'],borderColor:['#5B92AD','#D94F2E'],borderWidth:1.5,borderRadius:4,borderSkipped:'bottom',datalabels:{{display:true,anchor:'end',align:'top',offset:2,font:{{size:9,weight:'700'}},color:['#1E3F5A','#8B2A17'],formatter:v=>v+'\\nkVA'}}}}]}},
+  options:{{responsive:true,maintainAspectRatio:false,layout:{{padding:{{top:28}}}},plugins:{{legend:{{display:false}},tooltip:{{callbacks:{{label:ctx=>` ${{ctx.parsed.y}} kVA`}}}}}},scales:{{x:{{grid:{{display:false}},ticks:{{color:'#7A8C7E',font:{{size:9}}}},border:{{display:false}}}},y:{{min:0,max:Math.ceil(Math.max({d.contract_demand},{d.max_demand})/200)*200+200,grid:{{color:'rgba(0,0,0,.04)'}},ticks:{{color:'#7A8C7E',font:{{size:9}},callback:v=>v+' kVA'}},border:{{display:false}}}}}}}}
 }});
 
 // ── Heatmap ───────────────────────────────────────────────────────────────────
