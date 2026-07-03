@@ -1,12 +1,4 @@
 import psycopg2
-
-conn = psycopg2.connect(
-    host="65.1.248.33",
-    user="script_client", 
-    password="JlR2KPVu.s/b5fTy",
-    database="ap",
-    port=5432
-)
 cur = conn.cursor()
 
 cur.execute("SELECT DISTINCT date FROM book_savings WHERE msn = %s ORDER BY date DESC LIMIT 20", ("67000509",))
